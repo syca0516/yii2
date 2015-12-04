@@ -107,23 +107,25 @@ class Event extends Object
         $class = ltrim($class, '\\');
         if (empty(self::$_events[$name][$class])) {
             return false;
-        }
-        if ($handler === null) {
-            unset(self::$_events[$name][$class]);
-            return true;
         } else {
-            $removed = false;
-            foreach (self::$_events[$name][$class] as $i => $event) {
-                if ($event[0] === $handler) {
-                    unset(self::$_events[$name][$class][$i]);
-                    $removed = true;
+            if ($handler === null) {
+                unset(self::$_events[$name][$class]);
+                return true;
+            } else {
+                $removed = false;
+                foreach (self::$_events[$name][$class] as $i => $event) {
+                    if ($event[0] === $handler) {
+                        unset(self::$_events[$name][$class][$i]);
+                        $removed = true;
+                    }
                 }
-            }
-            if ($removed) {
-                self::$_events[$name][$class] = array_values(self::$_events[$name][$class]);
-            }
 
-            return $removed;
+                if ($removed) {
+                    self::$_events[$name][$class] = array_values(self::$_events[$name][$class]);
+                }
+
+                return $removed;
+            }
         }
     }
 
@@ -139,19 +141,21 @@ class Event extends Object
     {
         if (empty(self::$_events[$name])) {
             return false;
-        }
-        if (is_object($class)) {
-            $class = get_class($class);
         } else {
-            $class = ltrim($class, '\\');
-        }
-        do {
-            if (!empty(self::$_events[$name][$class])) {
-                return true;
+            if (is_object($class)) {
+                $class = get_class($class);
+            } else {
+                $class = ltrim($class, '\\');
             }
-        } while (($class = get_parent_class($class)) !== false);
 
-        return false;
+            do {
+                if (!empty(self::$_events[$name][$class])) {
+                    return true;
+                }
+            } while (($class = get_parent_class($class)) !== false);
+
+            return false;
+        }
     }
 
     /**
@@ -166,31 +170,35 @@ class Event extends Object
     {
         if (empty(self::$_events[$name])) {
             return;
-        }
-        if ($event === null) {
-            $event = new static;
-        }
-        $event->handled = false;
-        $event->name = $name;
-
-        if (is_object($class)) {
-            if ($event->sender === null) {
-                $event->sender = $class;
-            }
-            $class = get_class($class);
         } else {
-            $class = ltrim($class, '\\');
-        }
-        do {
-            if (!empty(self::$_events[$name][$class])) {
-                foreach (self::$_events[$name][$class] as $handler) {
-                    $event->data = $handler[1];
-                    call_user_func($handler[0], $event);
-                    if ($event->handled) {
-                        return;
+            if ($event === null) {
+                $event = new static;
+            }
+
+            $event->handled = false;
+            $event->name = $name;
+
+            if (is_object($class)) {
+                if ($event->sender === null) {
+                    $event->sender = $class;
+                }
+
+                $class = get_class($class);
+            } else {
+                $class = ltrim($class, '\\');
+            }
+            do {
+                if (!empty(self::$_events[$name][$class])) {
+                    foreach (self::$_events[$name][$class] as $handler) {
+                        $event->data = $handler[1];
+                        call_user_func($handler[0], $event);
+
+                        if ($event->handled) {
+                            return;
+                        }
                     }
                 }
-            }
-        } while (($class = get_parent_class($class)) !== false);
+            } while (($class = get_parent_class($class)) !== false);
+        }
     }
 }

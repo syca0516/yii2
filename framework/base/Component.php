@@ -136,11 +136,13 @@ class Component extends Object
                     return $behavior->$name;
                 }
             }
-        }
-        if (method_exists($this, 'set' . $name)) {
-            throw new InvalidCallException('Getting write-only property: ' . get_class($this) . '::' . $name);
-        } else {
-            throw new UnknownPropertyException('Getting unknown property: ' . get_class($this) . '::' . $name);
+            if (method_exists($this, 'set' . $name)) {
+                throw new InvalidCallException(
+                    'Getting write-only property: ' . get_class($this) . '::' . $name);
+            } else {
+                throw new UnknownPropertyException(
+                    'Getting unknown property: ' . get_class($this) . '::' . $name);
+            }
         }
     }
 
@@ -190,11 +192,13 @@ class Component extends Object
                     return;
                 }
             }
-        }
-        if (method_exists($this, 'get' . $name)) {
-            throw new InvalidCallException('Setting read-only property: ' . get_class($this) . '::' . $name);
-        } else {
-            throw new UnknownPropertyException('Setting unknown property: ' . get_class($this) . '::' . $name);
+            if (method_exists($this, 'get' . $name)) {
+                throw new InvalidCallException(
+                    'Setting read-only property: ' . get_class($this) . '::' . $name);
+            } else {
+                throw new UnknownPropertyException(
+                    'Setting unknown property: ' . get_class($this) . '::' . $name);
+            }
         }
     }
 
@@ -225,8 +229,8 @@ class Component extends Object
                     return $behavior->$name !== null;
                 }
             }
+            return false;
         }
-        return false;
     }
 
     /**
@@ -257,8 +261,9 @@ class Component extends Object
                     return;
                 }
             }
+            throw new InvalidCallException(
+                'Unsetting an unknown or read-only property: ' . get_class($this) . '::' . $name);
         }
-        throw new InvalidCallException('Unsetting an unknown or read-only property: ' . get_class($this) . '::' . $name);
     }
 
     /**
@@ -313,7 +318,8 @@ class Component extends Object
      */
     public function hasProperty($name, $checkVars = true, $checkBehaviors = true)
     {
-        return $this->canGetProperty($name, $checkVars, $checkBehaviors) || $this->canSetProperty($name, false, $checkBehaviors);
+        return $this->canGetProperty($name, $checkVars, $checkBehaviors)
+            || $this->canSetProperty($name, false, $checkBehaviors);
     }
 
     /**
@@ -333,7 +339,9 @@ class Component extends Object
      */
     public function canGetProperty($name, $checkVars = true, $checkBehaviors = true)
     {
-        if (method_exists($this, 'get' . $name) || $checkVars && property_exists($this, $name)) {
+        if (method_exists($this, 'get' . $name)) {
+            return true;
+        } elseif ($checkVars && property_exists($this, $name)) {
             return true;
         } elseif ($checkBehaviors) {
             $this->ensureBehaviors();
@@ -342,8 +350,10 @@ class Component extends Object
                     return true;
                 }
             }
+            return false;
+        } else {
+            return false;
         }
-        return false;
     }
 
     /**
@@ -363,7 +373,9 @@ class Component extends Object
      */
     public function canSetProperty($name, $checkVars = true, $checkBehaviors = true)
     {
-        if (method_exists($this, 'set' . $name) || $checkVars && property_exists($this, $name)) {
+        if (method_exists($this, 'set' . $name)) {
+            return true;
+        } elseif ($checkVars && property_exists($this, $name)) {
             return true;
         } elseif ($checkBehaviors) {
             $this->ensureBehaviors();
@@ -372,8 +384,10 @@ class Component extends Object
                     return true;
                 }
             }
+            return false;
+        } else {
+            return false;
         }
-        return false;
     }
 
     /**
@@ -398,8 +412,10 @@ class Component extends Object
                     return true;
                 }
             }
+            return false;
+        } else {
+            return false;
         }
-        return false;
     }
 
     /**
@@ -441,7 +457,11 @@ class Component extends Object
     public function hasEventHandlers($name)
     {
         $this->ensureBehaviors();
-        return !empty($this->_events[$name]) || Event::hasHandlers($this, $name);
+        if (!empty($this->_events[$name])) {
+            return true;
+        } else {
+            return Event::hasHandlers($this, $name);
+        }
     }
 
     /**
@@ -544,9 +564,11 @@ class Component extends Object
                     return;
                 }
             }
+            Event::trigger($this, $name, $event);
+        } else {
+            // invoke class-level attached handlers
+            Event::trigger($this, $name, $event);
         }
-        // invoke class-level attached handlers
-        Event::trigger($this, $name, $event);
     }
 
     /**
@@ -646,6 +668,8 @@ class Component extends Object
             foreach ($this->behaviors() as $name => $behavior) {
                 $this->attachBehaviorInternal($name, $behavior);
             }
+        } else {
+            return;
         }
     }
 
@@ -662,15 +686,19 @@ class Component extends Object
         if (!($behavior instanceof Behavior)) {
             $behavior = Yii::createObject($behavior);
         }
+
         if (is_int($name)) {
             $behavior->attach($this);
             $this->_behaviors[] = $behavior;
         } else {
             if (isset($this->_behaviors[$name])) {
                 $this->_behaviors[$name]->detach();
+                $behavior->attach($this);
+                $this->_behaviors[$name] = $behavior;
+            } else {
+                $behavior->attach($this);
+                $this->_behaviors[$name] = $behavior;
             }
-            $behavior->attach($this);
-            $this->_behaviors[$name] = $behavior;
         }
         return $behavior;
     }

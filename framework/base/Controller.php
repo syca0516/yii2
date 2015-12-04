@@ -220,17 +220,24 @@ class Controller extends Component implements ViewContextInterface
         $actionMap = $this->actions();
         if (isset($actionMap[$id])) {
             return Yii::createObject($actionMap[$id], [$id, $this]);
-        } elseif (preg_match('/^[a-z0-9\\-_]+$/', $id) && strpos($id, '--') === false && trim($id, '-') === $id) {
+        } elseif (preg_match('/^[a-z0-9\\-_]+$/', $id)
+                && strpos($id, '--') === false
+                && trim($id, '-') === $id)
+        {
             $methodName = 'action' . str_replace(' ', '', ucwords(implode(' ', explode('-', $id))));
             if (method_exists($this, $methodName)) {
                 $method = new \ReflectionMethod($this, $methodName);
                 if ($method->isPublic() && $method->getName() === $methodName) {
                     return new InlineAction($id, $this, $methodName);
+                } else {
+                    return null;
                 }
+            } else {
+                return null;
             }
+        } else {
+            return null;
         }
-
-        return null;
     }
 
     /**
@@ -374,7 +381,7 @@ class Controller extends Component implements ViewContextInterface
      */
     public function render($view, $params = [])
     {
-        $content = $this->getView()->render($view, $params, $this);
+        $content = $this->renderPartial($view, $params);
         return $this->renderContent($content);
     }
 
@@ -389,7 +396,7 @@ class Controller extends Component implements ViewContextInterface
     {
         $layoutFile = $this->findLayoutFile($this->getView());
         if ($layoutFile !== false) {
-            return $this->getView()->renderFile($layoutFile, ['content' => $content], $this);
+            return $this->renderFile($layoutFile, ['content' => $content]);
         } else {
             return $content;
         }
@@ -432,6 +439,7 @@ class Controller extends Component implements ViewContextInterface
         if ($this->_view === null) {
             $this->_view = Yii::$app->getView();
         }
+
         return $this->_view;
     }
 
@@ -455,6 +463,7 @@ class Controller extends Component implements ViewContextInterface
         if ($this->_viewPath === null) {
             $this->_viewPath = $this->module->getViewPath() . DIRECTORY_SEPARATOR . $this->id;
         }
+
         return $this->_viewPath;
     }
 
@@ -487,10 +496,10 @@ class Controller extends Component implements ViewContextInterface
             }
             if ($module !== null && is_string($module->layout)) {
                 $layout = $module->layout;
+            } else {
+                return false;
             }
-        }
-
-        if (!isset($layout)) {
+        } else {
             return false;
         }
 
@@ -504,12 +513,14 @@ class Controller extends Component implements ViewContextInterface
 
         if (pathinfo($file, PATHINFO_EXTENSION) !== '') {
             return $file;
-        }
-        $path = $file . '.' . $view->defaultExtension;
-        if ($view->defaultExtension !== 'php' && !is_file($path)) {
-            $path = $file . '.php';
-        }
+        } else {
+            $path = $file . '.' . $view->defaultExtension;
 
-        return $path;
+            if ($view->defaultExtension !== 'php' && !is_file($path)) {
+                $path = $file . '.php';
+            }
+
+            return $path;
+        }
     }
 }

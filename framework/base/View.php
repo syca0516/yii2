@@ -113,6 +113,7 @@ class View extends Component
             if (!isset($this->theme['class'])) {
                 $this->theme['class'] = 'yii\base\Theme';
             }
+
             $this->theme = Yii::createObject($this->theme);
         } elseif (is_string($this->theme)) {
             $this->theme = Yii::createObject($this->theme);
@@ -185,13 +186,15 @@ class View extends Component
 
         if (pathinfo($file, PATHINFO_EXTENSION) !== '') {
             return $file;
-        }
-        $path = $file . '.' . $this->defaultExtension;
-        if ($this->defaultExtension !== 'php' && !is_file($path)) {
-            $path = $file . '.php';
-        }
+        } else {
+            $path = $file . '.' . $this->defaultExtension;
 
-        return $path;
+            if ($this->defaultExtension !== 'php' && !is_file($path)) {
+                $path = $file . '.php';
+            }
+
+            return $path;
+        }
     }
 
     /**
@@ -220,6 +223,7 @@ class View extends Component
         if ($this->theme !== null) {
             $viewFile = $this->theme->applyTo($viewFile);
         }
+
         if (is_file($viewFile)) {
             $viewFile = FileHelper::localize($viewFile);
         } else {
